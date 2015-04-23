@@ -14,6 +14,12 @@ package org.cups4j.operations.ipp;
  * the GNU Lesser General Public License along with this program; if not, see
  * <http://www.gnu.org/licenses/>.
  */
+
+/*Notice
+ * This file has been modified. It is not the original. 
+ * Jon Freeman - 2013
+ */
+
 import java.io.UnsupportedEncodingException;
 import java.net.URL;
 import java.nio.ByteBuffer;
@@ -33,25 +39,6 @@ public class IppCancelJobOperation extends IppOperation {
     operationID = 0x0008;
     bufferSize = 8192;
   }
-
-  public IppCancelJobOperation(int port) {
-    this();
-    this.ippPort = port;
-  }
-
-  /**
-   * 
-   * @param url
-   *          printer-uri
-   * @param map
-   *          attributes
-   *          i.e.job-name,ipp-attribute-fidelity,document-name,compression,
-   *          document
-   *          -format,document-natural-language,job-impressions
-   *          ,job-media-sheets, job-template-attributes
-   * @return IPP header
-   * @throws UnsupportedEncodingException
-   */
 
   public ByteBuffer getIppHeader(URL uri, Map<String, String> map) throws UnsupportedEncodingException {
     if (uri == null) {
@@ -86,17 +73,7 @@ public class IppCancelJobOperation extends IppOperation {
     return ippBuf;
   }
 
-  /**
-   * Cancels a print job on the IPP server running on the given host.
-   * 
-   * @param hostname
-   * @param userName
-   * @param jobID
-   * @param message
-   * @return true on successful cancelation otherwise false.
-   * @throws Exception
-   */
-  public boolean cancelJob(String hostname, String userName, int jobID) throws Exception {
+  public boolean cancelJob(URL url, String userName, int jobID) throws Exception {
 
     Map<String, String> map = new HashMap<String, String>();
 
@@ -105,7 +82,7 @@ public class IppCancelJobOperation extends IppOperation {
     }
     map.put("requesting-user-name", userName);
 
-    URL url = new URL("http://" + hostname + "/jobs/" + Integer.toString(jobID));
+    url = new URL(url.toString() + "/jobs/" + Integer.toString(jobID));
     map.put("job-uri", url.toString());
 
     IppResult result = request(url, map);

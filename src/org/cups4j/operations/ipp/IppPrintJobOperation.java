@@ -14,6 +14,12 @@ package org.cups4j.operations.ipp;
  * the GNU Lesser General Public License along with this program; if not, see
  * <http://www.gnu.org/licenses/>.
  */
+
+/*Notice
+ * This file has been modified. It is not the original. 
+ * Jon Freeman - 2013
+ */
+
 import java.io.UnsupportedEncodingException;
 import java.net.URL;
 import java.nio.ByteBuffer;
@@ -29,23 +35,6 @@ public class IppPrintJobOperation extends IppOperation {
     operationID = 0x0002;
     bufferSize = 8192;
   }
-
-  public IppPrintJobOperation(int port) {
-    this();
-    this.ippPort = port;
-  }
-
-  /**
-   * 
-   * @param url
-   *          printer-uri
-   * @param map
-   *          attributes i.e.job-name,ipp-attribute-fidelity,document-name,compression, document
-   *          -format,document-natural-language,job-impressions ,job-media-sheets,
-   *          job-template-attributes
-   * @return IPP header
-   * @throws UnsupportedEncodingException
-   */
 
   public ByteBuffer getIppHeader(URL url, Map<String, String> map) throws UnsupportedEncodingException {
     if (url == null) {

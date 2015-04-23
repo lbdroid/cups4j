@@ -14,8 +14,14 @@ package org.cups4j.operations;
  * the GNU Lesser General Public License along with this program; if not, see
  * <http://www.gnu.org/licenses/>.
  */
+
+/*Notice
+ * This file has been modified. It is not the original. 
+ * Jon Freeman - 2013
+ */
+
+import ch.ethz.vppserver.ippclient.IppResponse;
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.SequenceInputStream;
@@ -34,22 +40,21 @@ import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.ResponseHandler;
 import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.entity.InputStreamEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.util.EntityUtils;
-import org.cups4j.CupsClient;
 
-import ch.ethz.vppserver.ippclient.IppResponse;
 import ch.ethz.vppserver.ippclient.IppResult;
 import ch.ethz.vppserver.ippclient.IppTag;
 import ch.ethz.vppserver.schema.ippclient.Attribute;
+import com.jonbanjo.ssl.JfSSLScheme;
+import org.apache.http.conn.scheme.Scheme;
+import org.apache.http.conn.ssl.SSLSocketFactory;
+import org.apache.http.conn.ssl.TrustSelfSignedStrategy;
 
 public abstract class IppOperation {
   protected short operationID = -1; // IPP operation ID
   protected short bufferSize = 8192; // BufferSize for this operation
-  protected int ippPort = CupsClient.DEFAULT_PORT;
-
   private final static String IPP_MIME_TYPE = "application/ipp";
 
   //
@@ -145,7 +150,8 @@ public abstract class IppOperation {
    * @return result
    * @throws Exception
    */
-  private IppResult sendRequest(URL url, ByteBuffer ippBuf, InputStream documentStream) throws Exception {
+    private IppResult sendRequest(URL url, ByteBuffer ippBuf, InputStream documentStream) throws Exception {
+
     IppResult ippResult = null;
     if (ippBuf == null) {
       return null;
@@ -167,7 +173,7 @@ public abstract class IppOperation {
     // probabaly not working with older CUPS versions
     client.getParams().setParameter("http.protocol.expect-continue", Boolean.valueOf(true));
 
-    HttpPost httpPost = new HttpPost(new URI("http://" + url.getHost() + ":" + ippPort) + url.getPath());
+    HttpPost httpPost = new HttpPost(url.toURI());
 
     httpPost.getParams().setParameter("http.socket.timeout", new Integer(10000));
 
@@ -175,7 +181,6 @@ public abstract class IppOperation {
     ippBuf.get(bytes);
 
     ByteArrayInputStream headerStream = new ByteArrayInputStream(bytes);
-
     // If we need to send a document, concatenate InputStreams
     InputStream inputStream = headerStream;
     if (documentStream != null) {
@@ -202,32 +207,27 @@ public abstract class IppOperation {
       }
     };
 
+    if (url.getProtocol().equals("https")){
+        
+        Scheme scheme = JfSSLScheme.getScheme();
+        if (scheme == null)
+            return null;
+        client.getConnectionManager().getSchemeRegistry().register(scheme); 
+    }
+    
     byte[] result = client.execute(httpPost, handler);
-
+    String test = new String(result);
     IppResponse ippResponse = new IppResponse();
 
     ippResult = ippResponse.getResponse(ByteBuffer.wrap(result));
     ippResult.setHttpStatusResponse(httpStatusLine);
 
-    // IppResultPrinter.print(ippResult);
-
     client.getConnectionManager().shutdown();
     return ippResult;
   }
 
-  /**
-   * Removes the port number in the submitted URL
-   * 
-   * @param url
-   * @return url without port number
-   */
   protected String stripPortNumber(URL url) {
-    String protocol = url.getProtocol();
-    if ("ipp".equals(protocol)) {
-      protocol = "http";
-    }
-
-    return protocol + "://" + url.getHost() + url.getPath();
+    return url.getProtocol() + "://" + url.getHost() + url.getPath();
   }
 
   protected String getAttributeValue(Attribute attr) {

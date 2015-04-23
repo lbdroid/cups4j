@@ -23,7 +23,6 @@ import java.util.Map;
 import org.cups4j.operations.ipp.IppGetJobAttributesOperation;
 import org.cups4j.operations.ipp.IppGetJobsOperation;
 import org.cups4j.operations.ipp.IppPrintJobOperation;
-import org.cups4j.util.IppResultPrinter;
 
 import ch.ethz.vppserver.ippclient.IppResult;
 import ch.ethz.vppserver.schema.ippclient.Attribute;
@@ -110,7 +109,7 @@ public class CupsPrinter {
     if (printJob.isDuplex()) {
       addAttribute(attributes, "job-attributes", "sides:keyword:two-sided-long-edge");
     }
-    IppPrintJobOperation command = new IppPrintJobOperation(printerURL.getPort());
+    IppPrintJobOperation command = new IppPrintJobOperation();
     IppResult ippResult = command.request(printerURL, attributes, document);
 //    IppResultPrinter.print(ippResult);
     
@@ -163,7 +162,7 @@ public class CupsPrinter {
    */
 
   public List<PrintJobAttributes> getJobs(WhichJobsEnum whichJobs, String user, boolean myJobs) throws Exception {
-    IppGetJobsOperation command = new IppGetJobsOperation(printerURL.getPort());
+    IppGetJobsOperation command = new IppGetJobsOperation();
 
     return command.getPrintJobs(this, whichJobs, user, myJobs);
   }
@@ -188,8 +187,8 @@ public class CupsPrinter {
    * @throws Exception
    */
   public JobStateEnum getJobStatus(String userName, int jobID) throws Exception {
-    IppGetJobAttributesOperation command = new IppGetJobAttributesOperation(printerURL.getPort());
-    PrintJobAttributes job = command.getPrintJobAttributes(printerURL.getHost(), userName, printerURL.getPort(), jobID);
+    IppGetJobAttributesOperation command = new IppGetJobAttributesOperation();
+    PrintJobAttributes job = command.getPrintJobAttributes(printerURL, userName, jobID);
 
     return job.getJobState();
   }

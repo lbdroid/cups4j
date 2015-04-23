@@ -1,20 +1,14 @@
 package ch.ethz.vppserver.ippclient;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.xml.bind.JAXBException;
-
 import ch.ethz.vppserver.schema.ippclient.Attribute;
 import ch.ethz.vppserver.schema.ippclient.AttributeGroup;
 import ch.ethz.vppserver.schema.ippclient.AttributeValue;
-import ch.ethz.vppserver.schema.ippclient.Enum;
-import ch.ethz.vppserver.schema.ippclient.SetOfEnum;
-import ch.ethz.vppserver.schema.ippclient.Tag;
 
 /**
  * Copyright (C) 2008 ITS of ETH Zurich, Switzerland, Sarah Windler Burri
@@ -32,12 +26,17 @@ import ch.ethz.vppserver.schema.ippclient.Tag;
  * received a copy of the GNU Lesser General Public License along with this
  * program; if not, see <http://www.gnu.org/licenses/>.
  */
+
+/*Notice
+ * This file has been modified. It is not the original. 
+ * Ppd op patch as suggested at 
+ * http://www.cups4j.org/forum/viewtopic.php?f=6&t=40
+ * has been applied. Additional mods to work with
+ * IppLists Jon Freeman - 2013
+ */
+
 public class IppResponse {
   private final static String CRLF = "\r\n";
-
-  // Saved list of elements of 'TAG_LIST_FILENAME' and 'ATTRIBUTE_LIST_FILENAME'
-  private List<Tag> _tagList = null;
-  private List<AttributeGroup> _attributeGroupList = null;
 
   private static final int BYTEBUFFER_CAPACITY = 8192;
   // Saved response of printer
@@ -45,23 +44,10 @@ public class IppResponse {
   private Attribute _attributeResult = null;
   private List<AttributeGroup> _result = null;
 
-  private static IppJaxb ippJaxb = null;
-
   // read IPP response in global buffer
   ByteBuffer _buf = null;
 
-  public IppResponse() throws FileNotFoundException, JAXBException {
-    if (ippJaxb == null) {
-      synchronized (this) {
-        if (ippJaxb == null) {
-          ippJaxb = new IppJaxb();
-        }
-      }
-
-    }
-    _tagList = ippJaxb.getTagList();
-    _attributeGroupList = ippJaxb.getAttributeGroupList();
-
+  public IppResponse() {
     _result = new ArrayList<AttributeGroup>();
     _buf = ByteBuffer.allocate(BYTEBUFFER_CAPACITY);
   }
@@ -144,6 +130,7 @@ public class IppResponse {
     _result.clear();
 
     IppResult result = new IppResult();
+    result.setBuf(buffer.array());
     boolean ippHeaderResponse = false;
 
     // be careful: HTTP and IPP could be transmitted in different set of
@@ -217,8 +204,7 @@ public class IppResponse {
     sb.append(" Minor Version:" + IppUtil.toHexWithMarker(_buf.get()));
 
     String statusCode = IppUtil.toHexWithMarker(_buf.get()) + IppUtil.toHex(_buf.get());
-    String statusMessage = getEnumName(statusCode, "status-code");
-
+    String statusMessage = IppLists.statusCodeMap.get(statusCode);
     sb.append(" Request Id:" + _buf.getInt() + "\n");
     sb.append("Status Code:" + statusCode + "(" + statusMessage + ")");
 
@@ -689,40 +675,13 @@ public class IppResponse {
       System.err.println("IppResponse.getTagName(): no tag given");
       return null;
     }
-    int l = _tagList.size();
+    int l = IppLists.tagList.size();
     for (int i = 0; i < l; i++) {
-      if (tag.equals(_tagList.get(i).getValue())) {
-        return _tagList.get(i).getName();
+      if (tag.equals(IppLists.tagList.get(i).getValue())) {
+        return IppLists.tagList.get(i).getName();
       }
     }
     return "no name found for tag:" + tag;
-  }
-
-  /**
-   * 
-   * @param value
-   * @param nameOfAttribute
-   * @return
-   */
-  private String getEnumName(String value, String nameOfAttribute) {
-    if (value == null) {
-      System.err.println("IppResponse.getEnumName(String,String): value is null");
-      return null;
-    }
-    if (nameOfAttribute == null) {
-      System.err.println("IppResponse.getEnumName(String,String): nameOfAttribute is null");
-      return null;
-    }
-
-    int enumValue = 0;
-    if (value.contains("0x")) {
-      value = value.replace("0x", "");
-      ;
-      enumValue = Integer.parseInt(value, 16);
-    } else {
-      enumValue = Integer.parseInt(value, 10);
-    }
-    return getEnumName(enumValue, nameOfAttribute);
   }
 
   /**
@@ -732,54 +691,14 @@ public class IppResponse {
    * @return
    */
   private String getEnumName(int value, String nameOfAttribute) {
-    if (nameOfAttribute == null) {
-      System.err.println("IppResponse.getEnumName(int,String): nameOfAttribute is null");
-      return null;
-    }
-    int l = _attributeGroupList.size();
-    for (int i = 0; i < l; i++) {
-      AttributeGroup attributeGroup = _attributeGroupList.get(i);
-      List<Attribute> attributeList = attributeGroup.getAttribute();
-      int ll = attributeList.size();
-      for (int j = 0; j < ll; j++) {
-        Attribute attribute = attributeList.get(j);
-        String attributeName = attribute.getName();
-        if ((attributeName != null) && (attributeName.equals(nameOfAttribute))) {
-          List<AttributeValue> attributeValueList = attribute.getAttributeValue();
-          int lll = attributeValueList.size();
-          for (int z = 0; z < lll; z++) {
-            AttributeValue attributeValue = attributeValueList.get(z);
-            if (attributeValue.getSetOfEnum() != null) {
-              SetOfEnum setOfEnum = attributeValue.getSetOfEnum();
-              List<Enum> enumList = setOfEnum.getEnum();
-              int llll = enumList.size();
-              for (int w = 0; w < llll; w++) {
-                Enum enumEntry = enumList.get(w);
-                String enumValueString = enumEntry.getValue();
-                int enumValue = 0;
-                // some IPP enumerations are in hex, other decimal
-                // see http://www.iana.org/assignments/ipp-registrations for
-                // reference
-                if (enumValueString.contains("0x")) {
-                  enumValueString = enumValueString.replace("0x", "");
-                  ;
-                  enumValue = Integer.parseInt(enumValueString, 16);
-                } else {
-                  enumValue = Integer.parseInt(enumValueString, 10);
-                }
-                if (value == enumValue) {
-                  return enumEntry.getName();
-                }
-              }
-            } else {
-              System.err.println("IPPResponse.getEnumName(): " + "set-of-enum is null for attribute " + attributeName
-                  + ". Please control " + "the enumeration list in the XML file");
-              return null;
-            }
-          }
-        }
-      }
-    }
-    return "enum name not found in IANA list: " + value;
+    if (nameOfAttribute == null) 
+        return "Null attribute requested";
+    EnumItemMap itemMap = IppLists.enumMap.get(nameOfAttribute);
+    if (itemMap == null)
+        return "Attribute " + nameOfAttribute + "not found";
+    String attrValue = itemMap.get(value).name;
+    if (attrValue == null)
+        return "Value " + value + " for attribute " + nameOfAttribute + " not found";
+    return attrValue;
   }
 }

@@ -18,10 +18,19 @@ import ch.ethz.vppserver.schema.ippclient.AttributeGroup;
  * the GNU Lesser General Public License along with this program; if not, see
  * <http://www.gnu.org/licenses/>.
  */
+
+/*Notice
+ * This file has been modified. It is not the original. 
+ * ppd op patch as suggested at 
+ * http://www.cups4j.org/forum/viewtopic.php?f=6&t=40
+ * has been applied.
+ */
+
 public class IppResult {
   String _httpStatusResponse = null;
   String _ippStatusResponse = null;
   List<AttributeGroup> _attributeGroupList = null;
+  byte buf[];
 
   public IppResult() {
   }
@@ -72,5 +81,13 @@ public class IppResult {
    */
   public void setAttributeGroupList(List<AttributeGroup> group) {
     _attributeGroupList = group;
+  }
+  
+  public byte[] getBuf(){
+	  return buf;
+  }
+  
+  public void setBuf(byte[] buffer){
+	  this.buf = buffer;
   }
 }

@@ -14,6 +14,12 @@ package org.cups4j.operations.cups;
  * the GNU Lesser General Public License along with this program; if not, see
  * <http://www.gnu.org/licenses/>.
  */
+
+/*Notice
+ * This file has been modified. It is not the original. 
+ * Jon Freeman - 2013
+ */
+
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -22,8 +28,6 @@ import java.util.Map;
 
 import org.cups4j.CupsPrinter;
 import org.cups4j.operations.IppOperation;
-import org.cups4j.util.IppResultPrinter;
-
 import ch.ethz.vppserver.ippclient.IppResult;
 import ch.ethz.vppserver.schema.ippclient.Attribute;
 import ch.ethz.vppserver.schema.ippclient.AttributeGroup;
@@ -35,22 +39,15 @@ public class CupsGetPrintersOperation extends IppOperation {
     bufferSize = 8192;
   }
 
-  public CupsGetPrintersOperation(int port) {
-    this();
-    this.ippPort = port;
-  }
-
-  public List<CupsPrinter> getPrinters(String hostname, int port) throws Exception {
+  public List<CupsPrinter> getPrinters(URL url) throws Exception {
     List<CupsPrinter> printers = new ArrayList<CupsPrinter>();
 
     Map<String, String> map = new HashMap<String, String>();
     map.put(
         "requested-attributes",
         "copies-supported page-ranges-supported printer-name printer-info printer-location printer-make-and-model printer-uri-supported");
-    // map.put("requested-attributes", "all");
-    this.ippPort = port;
-
-    IppResult result = request(new URL("http://" + hostname + "/printers"), map);
+ 
+    IppResult result = request(new URL(url.toString() + "/printers/"), map);
 
 //     IppResultPrinter.print(result);
 
@@ -63,7 +60,7 @@ public class CupsGetPrintersOperation extends IppOperation {
         String printerDescription = null;
         for (Attribute attr : group.getAttribute()) {
           if (attr.getName().equals("printer-uri-supported")) {
-            printerURI = attr.getAttributeValue().get(0).getValue().replace("ipp://", "http://");
+            printerURI = attr.getAttributeValue().get(0).getValue().replace("ipp://", url.getProtocol() + "://");
           } else if (attr.getName().equals("printer-name")) {
             printerName = attr.getAttributeValue().get(0).getValue();
           } else if (attr.getName().equals("printer-location")) {

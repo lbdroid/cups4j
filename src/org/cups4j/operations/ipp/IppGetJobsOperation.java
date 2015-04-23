@@ -14,6 +14,12 @@ package org.cups4j.operations.ipp;
  * the GNU Lesser General Public License along with this program; if not, see
  * <http://www.gnu.org/licenses/>.
  */
+
+/**
+ * Notice this file has been modified. It is not the original.
+ * Job Creation Time added Jon Freeman 2013
+ */
+
 import java.io.UnsupportedEncodingException;
 import java.net.URL;
 import java.nio.ByteBuffer;
@@ -33,6 +39,7 @@ import ch.ethz.vppserver.ippclient.IppResult;
 import ch.ethz.vppserver.ippclient.IppTag;
 import ch.ethz.vppserver.schema.ippclient.Attribute;
 import ch.ethz.vppserver.schema.ippclient.AttributeGroup;
+import java.util.Date;
 
 public class IppGetJobsOperation extends IppOperation {
 
@@ -41,24 +48,11 @@ public class IppGetJobsOperation extends IppOperation {
     bufferSize = 8192;
   }
 
-  public IppGetJobsOperation(int port) {
-    this();
-    ippPort = port;
-  }
-
-  /**
-   * 
-   * @param url
-   *          printer-uri
-   * @param map
-   *          attributes i.e. requesting-user-name,limit,which-jobs,my-jobs, requested-attributes
-   * @return IPP header
-   * @throws UnsupportedEncodingException
-   */
   public ByteBuffer getIppHeader(URL url, Map<String, String> map) throws UnsupportedEncodingException {
     ByteBuffer ippBuf = ByteBuffer.allocateDirect(bufferSize);
 
-    map.put("requested-attributes", "job-name job-id job-state job-originating-user-name job-printer-uri copies");
+    //not sure why next line is here, it overwrites job attributes in map parameter - JF
+    //map.put("requested-attributes", "job-name job-id job-state job-originating-user-name job-printer-uri copies");
 
     ippBuf = IppTag.getOperation(ippBuf, operationID);
     ippBuf = IppTag.getUri(ippBuf, "printer-uri", stripPortNumber(url));
@@ -112,13 +106,15 @@ public class IppGetJobsOperation extends IppOperation {
     if (myJobs) {
       map.put("my-jobs", "true");
     }
+
+    //time-at-creation added JF
     map.put("requested-attributes",
-        "page-ranges print-quality sides job-uri job-id job-state job-printer-uri job-name job-originating-user-name");
+        "page-ranges print-quality sides time-at-creation job-uri job-id job-state job-printer-uri job-name job-originating-user-name");
 
     IppResult result = request(printer.getPrinterURL(), map);
 
-//    IppResultPrinter.print(result);
-
+    String protocol = printer.getPrinterURL().getProtocol() + "://";
+    
     for (AttributeGroup group : result.getAttributeGroupList()) {
       if ("job-attributes-tag".equals(group.getTagName())) {
         jobAttributes = new PrintJobAttributes();
@@ -127,17 +123,22 @@ public class IppGetJobsOperation extends IppOperation {
             String attValue = getAttributeValue(attr);
             
             if ("job-uri".equals(attr.getName())) {
-              jobAttributes.setJobURL(new URL(attValue.replace("ipp://", "http://")));
+              jobAttributes.setJobURL(new URL(attValue.replace("ipp://", protocol)));
             } else if ("job-id".equals(attr.getName())) {
               jobAttributes.setJobID(Integer.parseInt(attValue));
             } else if ("job-state".equals(attr.getName())) {
               jobAttributes.setJobState(JobStateEnum.fromString(attValue));
             } else if ("job-printer-uri".equals(attr.getName())) {
-              jobAttributes.setPrinterURL(new URL(attValue.replace("ipp://", "http://")));
+              jobAttributes.setPrinterURL(new URL(attValue.replace("ipp://", protocol)));
             } else if ("job-name".equals(attr.getName())) {
               jobAttributes.setJobName(attValue);
             } else if ("job-originating-user-name".equals(attr.getName())) {
               jobAttributes.setUserName(attValue);
+            }
+            else if ("time-at-creation".equals(attr.getName())){
+                long unixTime = Long.parseLong(attValue);
+                Date dt = new Date(unixTime * 1000);
+                jobAttributes.setJobCreateTime(dt);
             }
           }
         }

@@ -14,6 +14,12 @@ package org.cups4j.operations.ipp;
  * the GNU Lesser General Public License along with this program; if not, see
  * <http://www.gnu.org/licenses/>.
  */
+
+/*Notice
+ * This file has been modified. It is not the original. 
+ * Jon Freeman - 2013
+ */
+
 import java.io.UnsupportedEncodingException;
 import java.net.URL;
 import java.nio.ByteBuffer;
@@ -24,8 +30,6 @@ import java.util.Map;
 import org.cups4j.JobStateEnum;
 import org.cups4j.PrintJobAttributes;
 import org.cups4j.operations.IppOperation;
-import org.cups4j.util.IppResultPrinter;
-
 import ch.ethz.vppserver.ippclient.IppResult;
 import ch.ethz.vppserver.ippclient.IppTag;
 import ch.ethz.vppserver.schema.ippclient.Attribute;
@@ -38,20 +42,6 @@ public class IppGetJobAttributesOperation extends IppOperation {
     bufferSize = 8192;
   }
 
-  public IppGetJobAttributesOperation(int port) {
-    this();
-    this.ippPort = port;
-  }
-
-  /**
-   * 
-   * @param uri
-   *          printer-uri or job-uri
-   * @param map
-   *          attributes i.e. job-id,requesting-user-name,requested-attributes
-   * @return ByteBuffer IPP header
-   * @throws UnsupportedEncodingException
-   */
   public ByteBuffer getIppHeader(URL uri, Map<String, String> map) throws UnsupportedEncodingException {
     ByteBuffer ippBuf = ByteBuffer.allocateDirect(bufferSize);
     ippBuf = IppTag.getOperation(ippBuf, operationID);
@@ -100,7 +90,7 @@ public class IppGetJobAttributesOperation extends IppOperation {
     return ippBuf;
   }
 
-  public PrintJobAttributes getPrintJobAttributes(String hostname, String userName, int port, int jobID)
+  public PrintJobAttributes getPrintJobAttributes(URL url, String userName, int jobID)
       throws Exception {
     PrintJobAttributes job = null;
 
@@ -110,7 +100,7 @@ public class IppGetJobAttributesOperation extends IppOperation {
    
     map.put("requested-attributes","all");
     map.put("requesting-user-name", userName);
-    IppResult result = request(new URL("http://" + hostname + "/jobs/" + jobID), map);
+    IppResult result = request(new URL(url.toString() + "/jobs/" + jobID), map);
 
     // IppResultPrinter.print(result);
     job = new PrintJobAttributes();

@@ -14,6 +14,12 @@ package org.cups4j.operations.cups;
  * the GNU Lesser General Public License along with this program; if not, see
  * <http://www.gnu.org/licenses/>.
  */
+
+/*Notice
+ * This file has been modified. It is not the original. 
+ * Jon Freeman - 2013
+ */
+
 import java.net.URL;
 import java.util.HashMap;
 
@@ -30,19 +36,14 @@ public class CupsGetDefaultOperation extends IppOperation {
     bufferSize = 8192;
   }
 
-  public CupsGetDefaultOperation(int port) {
-    this();
-    this.ippPort = port;
-  }
-
-  public CupsPrinter getDefaultPrinter(String hostname, int port) throws Exception {
+  public CupsPrinter getDefaultPrinter(URL url) throws Exception {
     CupsPrinter defaultPrinter = null;
-    CupsGetDefaultOperation command = new CupsGetDefaultOperation(port);
+    CupsGetDefaultOperation command = new CupsGetDefaultOperation();
 
     HashMap<String, String> map = new HashMap<String, String>();
     map.put("requested-attributes", "printer-name printer-uri-supported printer-location");
 
-    IppResult result = command.request(new URL("http://" + hostname + "/printers"), map);
+    IppResult result = command.request(new URL(url.toString() + "/printers"), map);
     for (AttributeGroup group : result.getAttributeGroupList()) {
       if (group.getTagName().equals("printer-attributes-tag")) {
         String printerURL = null;
