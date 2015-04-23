@@ -1,0 +1,114 @@
+<?xml version="1.0"?>
+  <!--
+    Copyright (C) 2009 Harald Weyhing This program is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public License as published by the Free
+    Software Foundation; either version 3 of the License, or (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+    without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See
+    the GNU Lesser General Public License for more details. You should have received a copy of the
+    GNU Lesser General Public License along with this program; if not, see
+    <http://www.gnu.org/licenses/>.
+  -->
+<project name="cups4j" default="dist" basedir=".">
+
+  <!-- set global properties for this build -->
+  <property name="src" location="src" />
+  <property name="build" location="build" />
+  <property name="dist" location="dist" />
+  <property name="lib" location="lib" />
+  <property name="version" value="0.6.3"/>
+
+  <tstamp>
+    <format property="dtstamp" pattern="dd-MM-yyyy HH:mm:ss" />
+  </tstamp>
+
+  <path id="classpath">
+    <fileset dir="${lib}">
+      <include name="**/*.jar" />
+    </fileset>
+  </path>
+
+  <target name="init" depends="clean">
+    <tstamp />
+    <mkdir dir="${build}" />
+    <mkdir dir="${build}/classes" />
+    <mkdir dir="${dist}" />
+  </target>
+
+  <target name="compile" depends="init">
+    <javac debug="true" srcdir="${src}" destdir="${build}/classes">
+      <classpath refid="classpath" />
+    </javac>
+  </target>
+
+  <target name="create-manifest" depends="compile,javadoc">
+    <manifest file="${build}/classes/MANIFEST.MF">
+      <attribute name="Version" value="${version}" />
+      <attribute name="Built-By" value="info@cups4j.org" />
+      <attribute name="Built-On" value="${dtstamp}" />
+      <attribute name="Main-Class" value="org.cups4j.test.CupsTest" />
+    </manifest>
+  </target>
+  
+  <target name="javadoc" depends="compile">
+    <javadoc sourcepath="${src}" defaultexcludes="yes" packagenames="org.cups4j"
+      excludepackagenames="org.cups4j.test.*" destdir="${dist}/docs/api" author="true" version="true"
+      use="true" windowtitle="Cups4J API">
+      <doctitle>
+        <![CDATA[<h1>Cups4J</h1>]]></doctitle>
+      <bottom>
+      <![CDATA[<i>Copyright &#169; 2009 Harald Weyhing. All Rights Reserved.</i>]]></bottom>
+      <tag name="todo" scope="all" description="To do:" />
+    </javadoc>
+  </target>
+  
+  <target name="dist" depends="create-manifest">
+    <copy failonerror="false" todir="${build}/classes">
+      <fileset dir="resources" />
+    </copy>
+    <jar jarfile="${dist}/cups4j.runnable-${version}.jar" basedir="${build}/classes" manifest="${build}/classes/MANIFEST.MF">
+      <zipfileset src="${lib}/http/httpcore-4.1.4.jar" includes="**/*.class" />
+      <zipfileset src="${lib}/http/httpclient-4.1.3.jar" includes="**/*.class" />
+      <zipfileset src="${lib}/http/httpclient-cache-4.1.3.jar" includes="**/*.class" />
+      <zipfileset src="${lib}/http/httpmime-4.1.3.jar" includes="**/*.class" />
+      <zipfileset src="${lib}/http/commons-logging-1.1.1.jar" includes="**/*.class" />
+      <zipfileset src="${lib}/http/commons-codec-1.4.jar" includes="**/*.class" />
+    </jar>
+    <jar jarfile="${dist}/cups4j-${version}.jar" basedir="${build}/classes" manifest="${build}/classes/MANIFEST.MF" />
+    <jar jarfile="${dist}/cups4j.src-${version}.jar">
+      <fileset dir="${src}" casesensitive="yes">
+        <include name="**/*.java" />
+      </fileset>
+      <fileset dir="resources" />
+    </jar>
+    <zip destfile="${dist}/cups4j.eclipse-${version}.zip">
+      <zipfileset dir="${src}" prefix="cups4j/src">
+        <include name="**/*.java" />
+      </zipfileset>
+      <zipfileset dir="resources" prefix="cups4j/resources" />
+      <zipfileset dir="schema" prefix="cups4j/schema" />
+
+      <zipfileset dir="lib/http" prefix="cups4j/lib/http" />
+      <zipfileset dir="." prefix="cups4j/">
+        <!--<include name=".?*" />-->
+        <include name="build.xml" />
+        <include name="Readme" />
+        <include name="cups4j.ps" />
+      </zipfileset>
+    </zip>
+    <zip destfile="${dist}/cups4j.javadocs-${version}.zip">
+      <zipfileset dir="${dist}/docs" prefix="docs" />
+    </zip>
+  </target>
+
+  <target name="clean" depends="System.info">
+    <delete dir="${build}" />
+    <delete dir="${dist}" />
+  </target>
+
+  <target name="System.info">
+    <echo message="java.version: ${java.version}" />
+  </target>
+
+</project>
