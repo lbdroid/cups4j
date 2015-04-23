@@ -30,7 +30,11 @@ import org.cups4j.operations.OperationResult;
 
 public class IppGetPrinterAttributesOperation extends IppOperation{
 
-    private String userName;
+    public IppGetPrinterAttributesOperation() {
+		super();
+	}
+
+	private String userName;
     private Map<String, String> map;
     
     @Override

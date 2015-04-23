@@ -19,8 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 import ch.ethz.vppserver.ippclient.IppResponse;
-
-import com.jonbanjo.ssl.JfSSLScheme;
+import ml.rabidbeaver.ssl4cups4j.SSLScheme;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -130,7 +129,7 @@ public class HttpPoster {
 
     if (url.getProtocol().equals("https")){
         
-        Scheme scheme = JfSSLScheme.getScheme();
+        Scheme scheme = SSLScheme.getScheme();
         if (scheme == null)
             return null;
         client.getConnectionManager().getSchemeRegistry().register(scheme); 

@@ -27,6 +27,8 @@ import org.cups4j.operations.IppHeader;
 import org.cups4j.operations.IppOperation;
 import org.cups4j.operations.OperationResult;
 
+import android.content.Context;
+
 public class CupsGetPrintersOperation extends IppOperation{
 
     String userName;
