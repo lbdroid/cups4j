@@ -22,15 +22,15 @@ package org.cups4j;
  * 
  */
 public enum WhichJobsEnum {
-	COMPLETED("completed"), NOT_COMPLETED("not-completed"), ALL("all");
+  COMPLETED("completed"), NOT_COMPLETED("not-completed"), ALL("all");
 
-	private String value;
+  private String value;
 
-	WhichJobsEnum(String value) {
-		this.value = value;
-	}
+  WhichJobsEnum(String value) {
+    this.value = value;
+  }
 
-	public String getValue() {
-		return value;
-	}
+  public String getValue() {
+    return value;
+  }
 }

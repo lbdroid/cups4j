@@ -1,39 +1,36 @@
-package ch.ethz.vppserver.ippclient;
+package com.jonbanjo.vppserver.ippclient;
+
+/*
+JfCups
+Copyright (C) 2014 Jon Freeman
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+/*Based on ch.ethz.vppserver.ippclient.IppResponse.Java 
+Copyright (C) 2008 ITS of ETH Zurich, Switzerland, Sarah Windler Burri
+*/
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.List;
 
-import ch.ethz.vppserver.schema.ippclient.Attribute;
-import ch.ethz.vppserver.schema.ippclient.AttributeGroup;
-import ch.ethz.vppserver.schema.ippclient.AttributeValue;
-
-/**
- * Copyright (C) 2008 ITS of ETH Zurich, Switzerland, Sarah Windler Burri
- * 
- * This program is free software; you can redistribute it and/or modify it under
- * the terms of the GNU Lesser General Public License as published by the Free
- * Software Foundation; either version 3 of the License, or (at your option) any
- * later version.
- * 
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.
- * 
- * See the GNU Lesser General Public License for more details. You should have
- * received a copy of the GNU Lesser General Public License along with this
- * program; if not, see <http://www.gnu.org/licenses/>.
- */
-
-/*Notice
- * This file has been modified. It is not the original. 
- * Ppd op patch as suggested at 
- * http://www.cups4j.org/forum/viewtopic.php?f=6&t=40
- * has been applied. Additional mods to work with
- * IppLists Jon Freeman - 2013
- */
+import com.jonbanjo.vppserver.schema.ippclient.Attribute;
+import com.jonbanjo.vppserver.schema.ippclient.AttributeGroup;
+import com.jonbanjo.vppserver.schema.ippclient.AttributeValue;
+import java.io.UnsupportedEncodingException;
 
 public class IppResponse {
   private final static String CRLF = "\r\n";
@@ -42,7 +39,7 @@ public class IppResponse {
   // Saved response of printer
   private AttributeGroup _attributeGroupResult = null;
   private Attribute _attributeResult = null;
-  private List<AttributeGroup> _result = null;
+  private List <AttributeGroup> _result = null;
 
   // read IPP response in global buffer
   ByteBuffer _buf = null;
@@ -52,68 +49,6 @@ public class IppResponse {
     _buf = ByteBuffer.allocate(BYTEBUFFER_CAPACITY);
   }
 
-  /**
-   * 
-   * @param channel
-   * @return
-   * @throws IOException
-   */
-  public IppResult getResponse(SocketChannel channel) throws IOException {
-    if (channel == null) {
-      System.err.println("IppResponse.getResponse(): no channel given");
-      return null;
-    }
-
-    _buf.clear();
-
-    _attributeGroupResult = null;
-    _attributeResult = null;
-    _result.clear();
-
-    IppResult result = new IppResult();
-    boolean httpResponse = false;
-    boolean ippHeaderResponse = false;
-
-    // be careful: HTTP and IPP could be transmitted in different set of
-    // buffers.
-    // see RFC2910, http://www.ietf.org/rfc/rfc2910, page 19
-    int ippByteCount = 0;
-    ByteBuffer tmpBuffer = ByteBuffer.allocate(BYTEBUFFER_CAPACITY);
-    ArrayList<ByteBuffer> bufferList = new ArrayList<ByteBuffer>();
-
-    while (channel.read(tmpBuffer) != -1) {
-      tmpBuffer.flip();
-      // read HTTP header
-      if ((!httpResponse) && (tmpBuffer.hasRemaining())) {
-        _buf = tmpBuffer;
-        result.setHttpStatusResponse(getHTTPHeader());
-        httpResponse = true;
-      }
-
-      // read IPP header
-      if ((!ippHeaderResponse) && (tmpBuffer.hasRemaining())) {
-        _buf = tmpBuffer;
-        result.setIppStatusResponse(getIPPHeader());
-        ippHeaderResponse = true;
-      }
-
-      // read the IPP-answer - this can be large, so take to read all
-      // information
-      if (tmpBuffer.hasRemaining()) {
-        ippByteCount += tmpBuffer.remaining();
-        bufferList.add(tmpBuffer);
-      }
-      tmpBuffer = ByteBuffer.allocate(BYTEBUFFER_CAPACITY);
-    }
-
-    _buf = concatenateBytebuffers(bufferList);
-    // read attribute group list with attributes
-    getAttributeGroupList();
-
-    closeAttributeGroup();
-    result.setAttributeGroupList(_result);
-    return result;
-  }
 
   /**
    * 
@@ -153,58 +88,19 @@ public class IppResponse {
   }
 
   /**
-   * concatenate nio-ByteBuffers
-   * 
-   * @param buffers
-   *          ArrayList<ByteBuffer>
-   * @return ByteBuffer
-   */
-  private ByteBuffer concatenateBytebuffers(ArrayList<ByteBuffer> buffers) {
-    int n = 0;
-    for (ByteBuffer b : buffers)
-      n += b.remaining();
-
-    ByteBuffer buf = (n > 0 && buffers.get(0).isDirect()) ? ByteBuffer.allocateDirect(n) : ByteBuffer.allocate(n);
-    if (n > 0)
-      buf.order(buffers.get(0).order());
-
-    for (ByteBuffer b : buffers)
-      buf.put(b.duplicate());
-
-    buf.flip();
-    return buf;
-  }
-
-  /**
-   * 
-   * @return
-   */
-  private String getHTTPHeader() {
-    String endOf = CRLF + CRLF;
-    StringBuffer sb = new StringBuffer();
-    while (sb.indexOf(endOf) == -1) {
-      int b = _buf.get();
-      int ival = ((int) b) & 0xff;
-      char c = (char) ival;
-      sb.append(c);
-    }
-    if (sb.length() != 0) {
-      return sb.toString();
-    }
-    return null;
-  }
-
-  /**
    * 
    * @return
    */
   private String getIPPHeader() {
     StringBuffer sb = new StringBuffer();
-    sb.append("Major Version:" + IppUtil.toHexWithMarker(_buf.get()));
-    sb.append(" Minor Version:" + IppUtil.toHexWithMarker(_buf.get()));
+    sb.append("Major Version:" + IppConverter.toHexWithMarker(_buf.get()));
+    sb.append(" Minor Version:" + IppConverter.toHexWithMarker(_buf.get()));
 
-    String statusCode = IppUtil.toHexWithMarker(_buf.get()) + IppUtil.toHex(_buf.get());
+    String statusCode = IppConverter.toHexWithMarker(_buf.get()) + IppConverter.toHex(_buf.get());
     String statusMessage = IppLists.statusCodeMap.get(statusCode);
+    if (statusMessage == null){
+        statusMessage = "unknown";
+    }
     sb.append(" Request Id:" + _buf.getInt() + "\n");
     sb.append("Status Code:" + statusCode + "(" + statusMessage + ")");
 
@@ -225,7 +121,7 @@ public class IppResponse {
    * 
    * @return list of attributes group
    */
-  private List<AttributeGroup> getAttributeGroupList() {
+  private List<AttributeGroup> getAttributeGroupList() throws UnsupportedEncodingException {
     while (_buf.hasRemaining()) {
 
       byte tag = _buf.get();
@@ -328,7 +224,7 @@ public class IppResponse {
     _attributeResult = null;
 
     _attributeGroupResult = new AttributeGroup();
-    _attributeGroupResult.setTagName(getTagName(IppUtil.toHexWithMarker(tag)));
+    _attributeGroupResult.setTagName(getTagName(IppConverter.toHexWithMarker(tag)));
   }
 
   /**
@@ -349,7 +245,7 @@ public class IppResponse {
    * 
    * @param tag
    */
-  private void setTextAttribute(byte tag) {
+  private void setTextAttribute(byte tag) throws UnsupportedEncodingException {
     short length = _buf.getShort();
     if ((length != 0) && (_buf.remaining() >= length)) {
       setAttributeName(length);
@@ -363,8 +259,8 @@ public class IppResponse {
     if ((length != 0) && (_buf.remaining() >= length)) {
       byte[] dst = new byte[length];
       _buf.get(dst);
-      String value = IppUtil.toString(dst);
-      String hex = IppUtil.toHexWithMarker(tag);
+      String value = IppConverter.toString(dst);
+      String hex = IppConverter.toHexWithMarker(tag);
       AttributeValue attrValue = new AttributeValue();
       attrValue.setTag(hex);
       String tagName = getTagName(hex);
@@ -380,7 +276,7 @@ public class IppResponse {
    * 
    * @param tag
    */
-  private void setTextWithLanguageAttribute(byte tag) {
+  private void setTextWithLanguageAttribute(byte tag) throws UnsupportedEncodingException {
     short length = _buf.getShort();
     if ((length != 0) && (_buf.remaining() >= length)) {
       setAttributeName(length);
@@ -396,8 +292,8 @@ public class IppResponse {
     if ((length != 0) && (_buf.remaining() >= length)) {
       byte[] dst = new byte[length];
       _buf.get(dst);
-      String value = IppUtil.toString(dst);
-      String hex = IppUtil.toHexWithMarker(tag);
+      String value = IppConverter.toString(dst);
+      String hex = IppConverter.toHexWithMarker(tag);
       AttributeValue attrValue = new AttributeValue();
       attrValue.setTag(hex);
       String tagName = getTagName(hex);
@@ -410,7 +306,7 @@ public class IppResponse {
       if ((length != 0) && (_buf.remaining() >= length)) {
         dst = new byte[length];
         _buf.get(dst);
-        value = IppUtil.toString(dst);
+        value = IppConverter.toString(dst);
         attrValue = new AttributeValue();
         attrValue.setValue(value);
         _attributeResult.getAttributeValue().add(attrValue);
@@ -423,7 +319,7 @@ public class IppResponse {
    * 
    * @param tag
    */
-  private void setNameWithLanguageAttribute(byte tag) {
+  private void setNameWithLanguageAttribute(byte tag) throws UnsupportedEncodingException {
     short length = _buf.getShort();
     if ((length != 0) && (_buf.remaining() >= length)) {
       setAttributeName(length);
@@ -439,8 +335,8 @@ public class IppResponse {
     if ((length != 0) && (_buf.remaining() >= length)) {
       byte[] dst = new byte[length];
       _buf.get(dst);
-      String value = IppUtil.toString(dst);
-      String hex = IppUtil.toHexWithMarker(tag);
+      String value = IppConverter.toString(dst);
+      String hex = IppConverter.toHexWithMarker(tag);
       AttributeValue attrValue = new AttributeValue();
       attrValue.setTag(hex);
       String tagName = getTagName(hex);
@@ -453,7 +349,7 @@ public class IppResponse {
       if ((length != 0) && (_buf.remaining() >= length)) {
         dst = new byte[length];
         _buf.get(dst);
-        value = IppUtil.toString(dst);
+        value = IppConverter.toString(dst);
         attrValue = new AttributeValue();
         attrValue.setValue(value);
         _attributeResult.getAttributeValue().add(attrValue);
@@ -465,7 +361,7 @@ public class IppResponse {
    * 
    * @param tag
    */
-  private void setBooleanAttribute(byte tag) {
+  private void setBooleanAttribute(byte tag) throws UnsupportedEncodingException {
     short length = _buf.getShort();
     if ((length != 0) && (_buf.remaining() >= length)) {
       setAttributeName(length);
@@ -478,12 +374,12 @@ public class IppResponse {
     length = _buf.getShort();
     if ((length != 0) && (_buf.remaining() >= length)) {
       byte value = _buf.get();
-      String hex = IppUtil.toHexWithMarker(tag);
+      String hex = IppConverter.toHexWithMarker(tag);
       AttributeValue attrValue = new AttributeValue();
       attrValue.setTag(hex);
       String tagName = getTagName(hex);
       attrValue.setTagName(tagName);
-      attrValue.setValue(IppUtil.toBoolean(value));
+      attrValue.setValue(IppConverter.toBoolean(value));
       _attributeResult.getAttributeValue().add(attrValue);
     }
   }
@@ -492,7 +388,7 @@ public class IppResponse {
    * 
    * @param tag
    */
-  private void setDateTimeAttribute(byte tag) {
+  private void setDateTimeAttribute(byte tag) throws UnsupportedEncodingException {
     short length = _buf.getShort();
     if ((length != 0) && (_buf.remaining() >= length)) {
       setAttributeName(length);
@@ -506,8 +402,8 @@ public class IppResponse {
     if ((length != 0) && (_buf.remaining() >= length)) {
       byte[] dst = new byte[length];
       _buf.get(dst, 0, length);
-      String value = IppUtil.toDateTime(dst);
-      String hex = IppUtil.toHexWithMarker(tag);
+      String value = IppConverter.toDateTime(dst);
+      String hex = IppConverter.toHexWithMarker(tag);
       AttributeValue attrValue = new AttributeValue();
       attrValue.setTag(hex);
       String tagName = getTagName(hex);
@@ -521,7 +417,7 @@ public class IppResponse {
    * 
    * @param tag
    */
-  private void setIntegerAttribute(byte tag) {
+  private void setIntegerAttribute(byte tag) throws UnsupportedEncodingException {
     short length = _buf.getShort();
     if ((length != 0) && (_buf.remaining() >= length)) {
       setAttributeName(length);
@@ -533,7 +429,7 @@ public class IppResponse {
     length = _buf.getShort();
     if ((length != 0) && (_buf.remaining() >= length)) {
       int value = _buf.getInt();
-      String hex = IppUtil.toHexWithMarker(tag);
+      String hex = IppConverter.toHexWithMarker(tag);
       AttributeValue attrValue = new AttributeValue();
       attrValue.setTag(hex);
       String tagName = getTagName(hex);
@@ -547,7 +443,7 @@ public class IppResponse {
    * 
    * @param tag
    */
-  private void setNoValueAttribute(byte tag) {
+  private void setNoValueAttribute(byte tag) throws UnsupportedEncodingException {
     short length = _buf.getShort();
     if ((length != 0) && (_buf.remaining() >= length)) {
       setAttributeName(length);
@@ -558,7 +454,7 @@ public class IppResponse {
    * 
    * @param tag
    */
-  private void setRangeOfIntegerAttribute(byte tag) {
+  private void setRangeOfIntegerAttribute(byte tag) throws UnsupportedEncodingException {
     short length = _buf.getShort();
     if ((length != 0) && (_buf.remaining() >= length)) {
       setAttributeName(length);
@@ -571,7 +467,7 @@ public class IppResponse {
     if ((length != 0) && (_buf.remaining() >= length)) {
       int value1 = _buf.getInt();
       int value2 = _buf.getInt();
-      String hex = IppUtil.toHexWithMarker(tag);
+      String hex = IppConverter.toHexWithMarker(tag);
       AttributeValue attrValue = new AttributeValue();
       attrValue.setTag(hex);
       String tagName = getTagName(hex);
@@ -585,7 +481,7 @@ public class IppResponse {
    * 
    * @param tag
    */
-  private void setResolutionAttribute(byte tag) {
+  private void setResolutionAttribute(byte tag) throws UnsupportedEncodingException {
     short length = _buf.getShort();
     if ((length != 0) && (_buf.remaining() >= length)) {
       setAttributeName(length);
@@ -600,7 +496,7 @@ public class IppResponse {
       int value1 = _buf.getInt();
       int value2 = _buf.getInt();
       byte value3 = _buf.get();
-      String hex = IppUtil.toHexWithMarker(tag);
+      String hex = IppConverter.toHexWithMarker(tag);
       AttributeValue attrValue = new AttributeValue();
       attrValue.setTag(hex);
       String tagName = getTagName(hex);
@@ -614,7 +510,7 @@ public class IppResponse {
    * 
    * @param tag
    */
-  private void setEnumAttribute(byte tag) {
+  private void setEnumAttribute(byte tag) throws UnsupportedEncodingException {
     short length = _buf.getShort();
     if ((length != 0) && (_buf.remaining() >= length)) {
       setAttributeName(length);
@@ -627,7 +523,7 @@ public class IppResponse {
 
     length = _buf.getShort();
     if ((length != 0) && (_buf.remaining() >= length)) {
-      String hex = IppUtil.toHexWithMarker(tag);
+      String hex = IppConverter.toHexWithMarker(tag);
       AttributeValue attrValue = new AttributeValue();
       attrValue.setTag(hex);
       String tagName = getTagName(hex);
@@ -651,13 +547,13 @@ public class IppResponse {
    * 
    * @param length
    */
-  private void setAttributeName(short length) {
+  private void setAttributeName(short length) throws UnsupportedEncodingException {
     if ((length == 0) || (_buf.remaining() < length)) {
       return;
     }
     byte[] dst = new byte[length];
     _buf.get(dst);
-    String name = IppUtil.toString(dst);
+    String name = IppConverter.toString(dst);
     if (_attributeResult != null) {
       _attributeGroupResult.getAttribute().add(_attributeResult);
     }

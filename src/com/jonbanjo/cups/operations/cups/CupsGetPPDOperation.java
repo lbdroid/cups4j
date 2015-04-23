@@ -1,82 +1,94 @@
-package org.cups4j.operations.cups;
-/**
- * @author Frank Carnevale
-/ *
+package com.jonbanjo.cups.operations.cups;
 
-This program is free software; you can redistribute it and/or modify it under
-the terms of the GNU Lesser General Public License as published by the Free
-Software Foundation; either version 3 of the License, or (at your option) any
-later version.
- 
-This program is distributed in the hope that it will be useful, but WITHOUT
-ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-FOR A PARTICULAR PURPOSE.
- 
-See the GNU Lesser General Public License for more details. You should have
-received a copy of the GNU Lesser General Public License along with this
-program; if not, see <http://www.gnu.org/licenses/>.
+/*
+JfCups
+Copyright (C) 2014 Jon Freeman
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-/*Notice. This file is not part of the original cups4j. It is an implementaion
- * of a patch to cups4j suggested by Frank Carnevale
- */
-
+import com.jonbanjo.cups.operations.AuthInfo;
+import com.jonbanjo.cups.operations.IppHeader;
+import com.jonbanjo.cups.operations.IppOperation;
+import com.jonbanjo.cups.operations.OperationResult;
+import com.jonbanjo.vppserver.schema.ippclient.Attribute;
+import com.jonbanjo.vppserver.schema.ippclient.AttributeGroup;
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URL;
-import java.nio.ByteBuffer;
-import java.util.HashMap;
-import java.util.Map;
-
-import org.cups4j.CupsClient;
-import org.cups4j.operations.IppOperation;
-
-import ch.ethz.vppserver.ippclient.IppResult;
-import ch.ethz.vppserver.ippclient.IppTag;
 
 public class CupsGetPPDOperation extends IppOperation {
 
-  public CupsGetPPDOperation() {
-    operationID = 0x400F;
-    bufferSize = 8192;
-  }
-
-  public ByteBuffer getIppHeader(URL uri, Map<String, String> map) throws UnsupportedEncodingException {
-    if (uri == null) {
-      System.err.println("IppGetPPDOperation.getIppHeader(): uri is null");
-      return null;
+    public CupsGetPPDOperation() {
+        super();
     }
-
-    ByteBuffer ippBuf = ByteBuffer.allocateDirect(bufferSize);
-    ippBuf = IppTag.getOperation(ippBuf, operationID);
-
-    if (map == null) {
-      ippBuf = IppTag.getEnd(ippBuf);
-      ippBuf.flip();
-      return ippBuf;
+        
+    @Override
+    public void setOperation(){
+        operationID = 0x400F;
+        bufferSize = 8192;
     }
-
-    ippBuf = IppTag.getUri(ippBuf, "printer-uri", map.get("printer-uri"));
-    ippBuf = IppTag.getEnd(ippBuf);
-    ippBuf.flip();
-    return ippBuf;
-  }
-
-
-  public String getPPDFile(URL printerUrl) throws Exception {
-    Map<String, String> map = new HashMap<String, String>();
-
-    map.put("printer-uri",printerUrl.getPath());
     
-    URL url = new URL(printerUrl.getProtocol() + "://" + printerUrl.getHost() + ":" + printerUrl.getPort());
-
-    IppResult result = request(url, map);
     
-    String buf = new String(result.getBuf());
-    buf = buf.substring(buf.indexOf("*")); // Remove request attributes when returning the string
 
+  public String getPPDFile(URL printerUrl, AuthInfo auth) throws UnsupportedEncodingException, IOException, Exception{
+    
+    OperationResult result = request(printerUrl, auth);
+    
+    
+    //If printer is external,
+    //cups responds with the correct url to retrive the ppd.
+    String urlStr = null;
+    for (AttributeGroup group : result.getIppResult().getAttributeGroupList()){
+        if (group.getTagName().equals("operation-attributes-tag")){
+            for (Attribute attr : group.getAttribute()) {
+                if (attr.getName().equals("printer-uri")){
+                    urlStr = (attr.getAttributeValue().get(0).getValue());
+                    break;
+                }
+            }
+        }
+    }
+    if (urlStr != null){
+        if (urlStr.startsWith("ipps://")){
+            urlStr = urlStr.replace("ipps://", "https://");
+        }
+        else{
+            urlStr = urlStr.replace("ipp://", "http://");
+        }
+        result = request(new URL(urlStr), null);
+    }
+    
+    String status = result.getHttpStatusResult();
+        if (!(status.contains("200"))){
+            throw new Exception(status);
+        }
+    
+    String buf = new String(result.getIppResult().getBuf());
+    try {
+        buf = buf.substring(buf.indexOf("*"));
+    }
+    catch (Exception e){
+        System.out.println("Ppd Buffer is empty");
+    }
     return buf;
-
-    
   }
+  
+   @Override
+   protected void setAttributes() throws UnsupportedEncodingException{
+       header = IppHeader.getUriTag(header, "printer-uri", url);
+   }
+  
 
 }
