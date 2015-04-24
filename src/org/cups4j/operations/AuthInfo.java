@@ -2,6 +2,8 @@ package org.cups4j.operations;
 
 import org.apache.http.Header;
 
+import android.content.Context;
+
 public class AuthInfo{
     
     public final static int AUTH_OK = 0;
@@ -17,18 +19,20 @@ public class AuthInfo{
     private Header httpHeader = null;
     private Header authHeader = null;
     private String type = "";
+    Context context;
     
-    public AuthInfo(){
-    }
+    //public AuthInfo(){
+    //}
     
-    public AuthInfo(String username, String password){
+    public AuthInfo(Context ctx, String username, String password){
         this.username = username;
         this.password = password;
         this.type = "Basic";
         this.reason = AUTH_REQUESTED;
+        this.context=ctx;
     }
     
-    public void setUserPass(String username, String password){
+    public void xsetUserPass(String username, String password){
         this.username = username;
         this.password = password;
         this.reason = AUTH_REQUESTED;
@@ -62,8 +66,7 @@ public class AuthInfo{
         this.authHeader = header;
         reason = AUTH_OK;
     }
-    
-    
+        
     public int getReason(){
         return reason;
     }

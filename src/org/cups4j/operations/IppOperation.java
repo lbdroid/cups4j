@@ -28,7 +28,7 @@ public abstract class IppOperation {
     }
     protected final OperationResult request(URL url, InputStream documentStream, AuthInfo auth) throws UnsupportedEncodingException, IOException{
         if (auth == null){
-            auth = new AuthInfo();
+            //auth = new AuthInfo();
         }
         setOperation();
         this.url = url;

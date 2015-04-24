@@ -111,7 +111,7 @@ public class HttpPoster {
 
     if (url.getProtocol().equals("https")){
         
-        Scheme scheme = SSLScheme.getScheme();
+        Scheme scheme = SSLScheme.getScheme(auth.context);
         if (scheme == null)
             return null;
         client.getConnectionManager().getSchemeRegistry().register(scheme); 
