@@ -32,10 +32,11 @@ public class AuthInfo{
         this.context=ctx;
     }
     
-    public void xsetUserPass(String username, String password){
+    public void setUserPass(Context ctx, String username, String password){
         this.username = username;
         this.password = password;
         this.reason = AUTH_REQUESTED;
+        this.context=ctx;
     }
     
     public Header getHttpHeader(){
