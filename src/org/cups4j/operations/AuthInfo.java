@@ -21,8 +21,8 @@ public class AuthInfo{
     private String type = "";
     Context context;
     
-    //public AuthInfo(){
-    //}
+    public AuthInfo(){
+    }
     
     public AuthInfo(Context ctx, String username, String password){
         this.username = username;
